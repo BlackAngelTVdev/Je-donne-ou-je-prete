@@ -419,7 +419,20 @@ main {
     z-index: 100;
     padding: 10px 15px;
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;       /* Firefox */
+  }
+
+  .bottom-action-bar::-webkit-scrollbar {
+    display: none;               /* Chrome, Safari, Opera */
+  }
+
+  .bottom-action-bar .action-button {
+    flex-shrink: 0;
+    text-align: center;
+    margin: 0 5px;
   }
 
   .bottom-action-bar .action-button {
