@@ -76,10 +76,19 @@
       @if(auth.isAuthenticated && auth.user.isadmin)
         <a href="{{ route('admin.dashboard') }}" class="action-button admin-button">{{ t('messages.nav.admin') }}</a>
       @end
-
-    <div class="lang-switcher">
-      <a href="?lang=fr" class="lang-link {{ i18n.locale === 'fr' ? 'active' : '' }}">FR</a>
-      <span>|</span>
-      <a href="?lang=en" class="lang-link {{ i18n.locale === 'en' ? 'active' : '' }}">EN</a>
-    </div>
+    <a type="button" id="toggleViewBtn" class="action-button" data-current="{{ i18n.locale }}"
+      onclick="toggleLangSwitcher()">
+      {{ i18n.locale === 'fr' ? 'FR' : 'EN' }}
+    </a>
   </div>
+  <script>
+    function toggleLangSwitcher() {
+      const btn = document.getElementById('toggleViewBtn');
+      const currentLang = btn.getAttribute('data-current');
+
+      const nextLang = currentLang === 'fr' ? 'en' : 'fr';
+
+      // Recharge la page avec la nouvelle langue
+      window.location.search = `?lang=${nextLang}`;
+    }
+  </script>
