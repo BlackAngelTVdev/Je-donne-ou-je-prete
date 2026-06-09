@@ -1,19 +1,17 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
-// models accessed via DB queries below
 
 export default class AdminController {
-	public async dashboard({ view }: HttpContext) {
+	public async dashboard({ request, view }: HttpContext) {
 		// Totals
 		const usersCountRow = await db.from('users').count('id as total')
-		// Count only non-deleted (active) objects for more relevant stats
-		const donationsCountRow = await db.from('donation_objects').where('is_deleted', false).count('id as total')
-		const chercheCountRow = await db.from('cherche_objects').where('is_deleted', false).count('id as total')
+		const donationsCountRow = await db.from('donation_objects').whereRaw('is_deleted = 0').count('id as total')
+		const chercheCountRow = await db.from('cherche_objects').whereRaw('is_deleted = 0').count('id as total')
 		const reservationsCountRow = await db
 			.from('donation_objects')
 			.whereNotNull('reserved_by')
-			.where('is_deleted', false)
+			.whereRaw('is_deleted = 0')
 			.count('id as total')
 
 		const extractTotal = (row: any) => {
@@ -53,6 +51,21 @@ export default class AdminController {
 		// Fetch recent feedbacks (last 20)
 		const feedbacks = await db.from('feedbacks').select('*').orderBy('created_at', 'desc').limit(20)
 
+		// ==========================================
+		// RECHERCHE DES UTILISATEURS SÉCURISÉE
+		// ==========================================
+		const searchTerm = request.input('search')
+		const usersQuery = db.from('users').select('id', 'Username as username', 'email', 'isadmin')
+
+		if (searchTerm) {
+			usersQuery.whereRaw('(Username LIKE ? OR email LIKE ?)', [
+				`%${searchTerm}%`,
+				`%${searchTerm}%`
+			])
+		}
+
+		const users = await usersQuery.orderBy('Username', 'asc')
+
 		const stats = {
 			usersTotal,
 			donationsTotal,
@@ -61,6 +74,34 @@ export default class AdminController {
 			usersSeriesRows,
 		}
 
-		return view.render('pages/admin-dashboard', { stats, feedbacks })
+		return view.render('pages/admin-dashboard', { stats, feedbacks, users })
+	}
+
+	// ==========================================
+	// ACTION : DÉFINIR LE RÉFÉRENT DURABILITÉ
+	// ==========================================
+	public async setReferent({ params, response, session }: HttpContext) {
+		const userId = params.id
+
+		// 1. Vérifier si l'utilisateur existe
+		const user = await db.from('users').where('id', userId).first()
+		if (!user) {
+			session.flash('error', 'Utilisateur introuvable.')
+			return response.redirect().back()
+		}
+
+		// 2. Supprimer l'ancien référent unique
+		await db.from('sustainability_roles').where('role_key', 'referent_durabilite').del()
+
+		// 3. Insérer le nouveau rôle
+		await db.table('sustainability_roles').insert({
+			user_id: user.id,
+			role_key: 'referent_durabilite',
+			created_at: DateTime.now().toSQL(),
+			updated_at: DateTime.now().toSQL(),
+		})
+
+		session.flash('success', `L'utilisateur "${user.Username}" est maintenant Référent Durabilité.`)
+		return response.redirect().back()
 	}
 }
