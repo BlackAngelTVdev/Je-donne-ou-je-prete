@@ -53,6 +53,60 @@
           </table>
         </div>
       </section>
+
+      <section class="users-management">
+        <h2>Liste des utilisateurs</h2>
+
+        <div class="search-bar-wrap">
+          <form action="{{ route('admin.dashboard') }}" method="GET" class="search-form">
+            <input type="text" name="search" placeholder="Rechercher un utilisateur (nom, email...)"
+              value="{{ request.input('search') || '' }}" />
+            <button type="submit" class="btn-search">Rechercher</button>
+            @if(request.input('search'))
+            <a href="{{ route('admin.dashboard') }}" class="btn-clear">X</a>
+            @endif
+          </form>
+        </div>
+
+        <div class="users-table-wrap">
+          @if(users && users.length > 0)
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @each(user in users)
+              <tr>
+                <td>{{ user.username || 'Sans nom' }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span class="badge {{ user.isadmin ? 'badge-admin' : 'badge-user' }}">
+                    {{ user.isadmin ? 'Admin' : 'User' }}
+                  </span>
+                </td>
+                <td>
+                  <form action="{{ route('admin.users.setReferent', { id: user.id }) }}" method="POST" style="display:inline;">
+                    {{ csrfField() }}
+                    <button type="submit" class="btn-action-referent" onclick="return confirm('Définir cet utilisateur comme Référent Durabilité ?')">
+                      Rendre Référent
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              @end
+            </tbody>
+          </table>
+          @else
+          <p class="no-data">Aucun utilisateur trouvé.</p>
+          @endif
+        </div>
+      </section>
+
     </div>
 
     <aside class="right-column">
