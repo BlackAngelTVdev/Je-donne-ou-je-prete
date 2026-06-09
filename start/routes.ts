@@ -77,6 +77,7 @@ router
       .group(() => {
         router.get('/admin', [AdminController, 'dashboard']).as('admin.dashboard')
         router.delete('/admin/feedbacks/:id', [ContactsController, 'destroy']).as('admin.feedbacks.destroy')
+        router.post('/admin/users/:id/set-referent', [AdminController, 'setReferent']).as('admin.users.setReferent')
       })
       .use(middleware.admin())
   })
