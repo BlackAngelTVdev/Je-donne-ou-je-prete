@@ -22,7 +22,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          persist-credentials: false
+          
 
       - name: Compute next branch name
         id: next_branch
