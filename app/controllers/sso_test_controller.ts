@@ -4,6 +4,13 @@ import Hash from '@adonisjs/core/services/hash'
 import { createAdonisSsoFlowFromEnv } from '#services/sso_bridge_service'
 import User from '#models/user'
 
+class StudentBlockedError extends Error {
+  constructor() {
+    super('Student account not found in database')
+    this.name = 'StudentBlockedError'
+  }
+}
+
 type SsoResult = {
   email: string
   username: string
@@ -40,9 +47,20 @@ export default class SsoTestController {
    * PHASE 2 : Retour du portail SSO & Validation
    */
   public async callback(ctx: HttpContext) {
-    return this.flow().callbackLogin(ctx as any, (payload: SsoResult) =>
-      this.findOrCreateSsoUser(payload)
-    )
+    try {
+      return await this.flow().callbackLogin(ctx as any, (payload: SsoResult) =>
+        this.findOrCreateSsoUser(payload)
+      )
+    } catch (error) {
+      if (error instanceof StudentBlockedError) {
+        ctx.session.flash({
+          error:
+            'Les comptes étudiants ne sont pas autorisés à accéder à cette application. Veuillez contacter un administrateur.',
+        })
+        return ctx.response.redirect('/choix-login')
+      }
+      throw error
+    }
   }
 
   /**
@@ -87,7 +105,14 @@ export default class SsoTestController {
       return user
     }
 
-    // 2. Création si nouveau
+    // 2. Blocage des étudiants sans compte existant en base
+    const isStudent = roles.some((r) => /^UUS_ETML_Students$|^SKU_STU_Standard$/.test(r))
+    if (isStudent) {
+      console.log('SSO blocked: student account not found in database', { email, roles })
+      throw new StudentBlockedError()
+    }
+
+    // 3. Création si nouveau
     const baseUsername = normalizedUsernameFromSso || this.normalizeUsername(usernameFromSso)
     const username = await this.makeUniqueUsername(baseUsername)
     const password = await Hash.make(randomBytes(32).toString('hex'))
