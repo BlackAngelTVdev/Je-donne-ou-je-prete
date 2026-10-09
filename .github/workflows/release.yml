@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -20,16 +24,28 @@ jobs:
 
       - name: Check version change
         id: check_version
+        shell: bash
         run: |
+          set -euo pipefail
+
           # Récupère la version actuelle et la précédente
           NEW_VERSION=$(node -p "require('./package.json').version")
-          OLD_VERSION=$(git show HEAD^1:package.json | node -p "JSON.parse(process.stdin.read()).version" 2>/dev/null || echo "0.0.0")
+
+          if git rev-parse --verify --quiet 'HEAD^1^{commit}' >/dev/null 2>&1; then
+            OLD_VERSION=$(git show HEAD^1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version" || echo "0.0.0")
+          else
+            OLD_VERSION="0.0.0"
+          fi
+
+          echo "Version précédente : $OLD_VERSION"
+          echo "Version actuelle    : $NEW_VERSION"
 
           if [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "version_changed=true" >> "$GITHUB_OUTPUT"
+            echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           else
-            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "version_changed=false" >> "$GITHUB_OUTPUT"
+            echo "Version inchangée : aucune release à publier."
           fi
 
       - name: Setup Node.js
@@ -67,6 +83,7 @@ jobs:
         with:
           tag_name: v${{ steps.check_version.outputs.new_version }}
           name: Release v${{ steps.check_version.outputs.new_version }}
+          generate_release_notes: true
           files: build-v${{ steps.check_version.outputs.new_version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

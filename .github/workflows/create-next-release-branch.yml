@@ -6,6 +6,12 @@ on:
       - main
     types:
       - closed
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: 'Branche de release à clôturer (ex: Release-B4.7.1)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -13,7 +19,10 @@ permissions:
 
 jobs:
   create-next-branch:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'Release-vB')
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'Release-'))
     runs-on: ubuntu-latest
 
     steps:
@@ -22,28 +31,30 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          
 
       - name: Compute next branch name
         id: next_branch
         shell: bash
+        env:
+          SOURCE_BRANCH: ${{ github.event.inputs.source_branch || github.event.pull_request.head.ref }}
         run: |
-          source_branch='${{ github.event.pull_request.head.ref }}'
+          set -euo pipefail
 
-          if [[ "$source_branch" =~ ^Release-vB([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          echo "Branche source : $SOURCE_BRANCH"
+
+          # Convention supportée : Release-B4.7.1 (et l'ancien Release-vB4.6.0)
+          if [[ "$SOURCE_BRANCH" =~ ^Release-v?B([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
             major="${BASH_REMATCH[1]}"
             minor="${BASH_REMATCH[2]}"
             next_minor=$((minor + 1))
 
-            next_branch="Release-vB${major}.${next_minor}.0"
-            next_version="B${major}.${next_minor}.0"
-
-            echo "branch_name=$next_branch" >> "$GITHUB_OUTPUT"
-            echo "version=$next_version" >> "$GITHUB_OUTPUT"
+            echo "branch_name=Release-B${major}.${next_minor}.0" >> "$GITHUB_OUTPUT"
+            echo "version=B${major}.${next_minor}.0" >> "$GITHUB_OUTPUT"
+            echo "Prochaine branche : Release-B${major}.${next_minor}.0"
             exit 0
           fi
 
-          echo "Source branch '$source_branch' does not match Release-vBx.y.z, skipping."
+          echo "La branche '$SOURCE_BRANCH' ne respecte pas le format Release-Bx.y.z, rien à faire."
           echo "skip=true" >> "$GITHUB_OUTPUT"
 
       - name: Create branch and bump version
@@ -53,24 +64,34 @@ jobs:
           NEXT_BRANCH: ${{ steps.next_branch.outputs.branch_name }}
           NEXT_VERSION: ${{ steps.next_branch.outputs.version }}
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           if git ls-remote --exit-code --heads origin "$NEXT_BRANCH" >/dev/null 2>&1; then
-            echo "Branch $NEXT_BRANCH already exists, nothing to do."
+            echo "La branche $NEXT_BRANCH existe déjà, rien à faire."
             exit 0
           fi
 
           git checkout -b "$NEXT_BRANCH"
 
+          # Remplace uniquement la valeur de "version" pour ne pas reformater package.json
           node - <<'NODE'
-          const fs = require('fs')
+          const fs = require('node:fs')
 
           const filePath = 'package.json'
-          const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-          packageJson.version = process.env.NEXT_VERSION
-          fs.writeFileSync(filePath, JSON.stringify(packageJson, null, 2) + '\n')
+          const source = fs.readFileSync(filePath, 'utf8')
+          const updated = source.replace(/("version"\s*:\s*")[^"]*(")/, '$1' + process.env.NEXT_VERSION + '$2')
+
+          if (updated === source) {
+            throw new Error('Champ "version" introuvable dans package.json')
+          }
+
+          fs.writeFileSync(filePath, updated)
           NODE
+
+          echo "Version mise à jour : $(node -p "require('./package.json').version")"
 
           git add package.json
           git commit -m "chore(release): start $NEXT_BRANCH"
