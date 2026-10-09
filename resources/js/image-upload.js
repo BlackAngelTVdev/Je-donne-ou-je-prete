@@ -132,8 +132,6 @@ function initImageUpload() {
       "L'image dépasse la limite de %size%. Choisissez un fichier plus léger.",
     compressing:
       input.dataset.messageCompressing || 'Image trop lourde (%size%) : compression en cours…',
-    compressed:
-      input.dataset.messageCompressed || 'Image compressée automatiquement : %before% → %after%.',
   }
 
   let blocked = false
@@ -235,22 +233,9 @@ function initImageUpload() {
       // ce qui est acceptable puisqu'il respecte déjà la limite
       replaceInputFile(input, smaller, file.name)
       showPreview(smaller)
-
-      if (wasTooLarge) {
-        showFeedback(
-          fillTemplate(messages.compressed, {
-            before: formatSize(file.size),
-            after: formatSize(smaller.size),
-          }),
-          'success',
-          false
-        )
-      } else {
-        clearFeedback()
-      }
-      return
     }
 
+    // Compression volontairement silencieuse : aucun message de confirmation
     clearFeedback()
   }
 

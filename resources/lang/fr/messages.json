@@ -16,7 +16,6 @@
     "image_error_type": "Format d'image non supporté. Choisissez un fichier JPG, PNG ou WebP.",
     "image_error_size": "L'image dépasse la limite de 5 Mo. Choisissez un fichier plus léger.",
     "image_compressing": "Image trop lourde (%size%) : compression en cours…",
-    "image_compressed": "Image compressée automatiquement : %before% → %after%.",
     "name_label": "Nom de l'objet :",
     "name_placeholder": "Ex: Étagère",
     "desc_label": "Description détaillée :",
