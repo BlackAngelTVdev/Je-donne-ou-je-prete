@@ -20,9 +20,16 @@ function formatSize(bytes) {
   return `${Math.max(1, Math.round(bytes / 1024))} Ko`
 }
 
+/**
+ * Remplace les marqueurs %clé% par leur valeur.
+ *
+ * Les messages viennent de l'i18n Adonis (format ICU) : on ne peut pas
+ * utiliser {clé} dans les traductions, ICU les interpréterait comme des
+ * variables et ferait échouer le rendu des templates.
+ */
 function fillTemplate(template, values) {
   return Object.keys(values).reduce(
-    (result, key) => result.replaceAll(`{${key}}`, values[key]),
+    (result, key) => result.replaceAll(`%${key}%`, () => values[key]),
     template
   )
 }
@@ -122,11 +129,11 @@ function initImageUpload() {
       "Format d'image non supporté. Choisissez un fichier JPG, PNG ou WebP.",
     limit:
       input.dataset.messageLimit ||
-      "L'image dépasse la limite de {size}. Choisissez un fichier plus léger.",
+      "L'image dépasse la limite de %size%. Choisissez un fichier plus léger.",
     compressing:
-      input.dataset.messageCompressing || 'Image trop lourde ({size}) : compression en cours…',
+      input.dataset.messageCompressing || 'Image trop lourde (%size%) : compression en cours…',
     compressed:
-      input.dataset.messageCompressed || 'Image compressée automatiquement : {before} → {after}.',
+      input.dataset.messageCompressed || 'Image compressée automatiquement : %before% → %after%.',
   }
 
   let blocked = false
