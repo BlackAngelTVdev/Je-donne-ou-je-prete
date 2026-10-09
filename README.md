@@ -19,7 +19,7 @@
 - ✅ **Mode Don / Prêt** : publication d’objets à donner ou prêter avec filtres type + catégorie.
 - ✅ **Mode Recherche** : publication de besoins (objets recherchés) avec ses propres cartes et détails.
 - ✅ **Switch rapide Don ↔ Cherche** : bouton en header pour basculer entre les deux flux.
-- ✅ **Gestion des images** : upload, compression WebP, preview et affichage sur les objets `donation` et `cherche`.
+- ✅ **Gestion des images** : upload (5 Mo maximum), compression automatique dans le navigateur puis WebP côté serveur, preview et affichage sur les objets `donation` et `cherche`. La limite et les erreurs de taille/format sont affichées directement sous la zone d’upload.
 - ✅ **Réservations / offres** : workflow de contact avec modal + envoi d’email.
 - ✅ **Rôles utilisateur en DB** : `extainre` et `isadmin` disponibles dans `users`.
 - ✅ **Règle visibilité externe** : en mode don, un utilisateur `extainre=true` voit uniquement les objets publiés depuis plus de 3 mois.
