@@ -31,13 +31,38 @@
     <input type="hidden" id="hiddenMode" name="mode" value="" />
 
     <div class="field-group">
-      @!component('components/input', {
-      name : 'image',
-      label : t('messages.add_item.image_label'),
-      type : 'file',
-      attributes: { id: 'image', onchange: 'previewImage(event)' }
-      })
-      <img class="CACHER" id="imageDisplay" src="" alt="{{ t('messages.add_item.image_preview_alt') }}" />
+      <label for="image">{{ t('messages.add_item.image_label') }}</label>
+      <input
+        type="file"
+        id="image"
+        name="image"
+        accept="image/jpeg,image/png,image/webp"
+        data-message-type="{{ t('messages.add_item.image_error_type') }}"
+        data-message-limit="{{ t('messages.add_item.image_error_size') }}"
+        data-message-compressing="{{ t('messages.add_item.image_compressing') }}"
+        data-message-compressed="{{ t('messages.add_item.image_compressed') }}"
+      />
+
+      {{-- Limite de taille annoncée dès la zone d'upload --}}
+      <small class="upload-hint">{{ t('messages.add_item.image_hint') }}</small>
+
+      {{-- Message immédiatement visible (taille/format) — voir image-upload.js --}}
+      @if(flashMessages.has('errors.image'))
+        <div id="imageFeedback" class="upload-feedback error" role="alert" aria-live="assertive">
+          @each(message in flashMessages.get('errors.image'))
+            <span>{{ message }}</span>
+          @end
+        </div>
+      @else
+        <div id="imageFeedback" class="upload-feedback" role="alert" aria-live="assertive" hidden></div>
+      @end
+
+      <img
+        class="CACHER"
+        id="imageDisplay"
+        src=""
+        alt="{{ t('messages.add_item.image_preview_alt') }}"
+      />
     </div>
 
     {{-- Nom de l'objet --}}
@@ -195,11 +220,6 @@
   const objectForm = document.getElementById("objectForm");
 
   const hiddenMode = document.getElementById("hiddenMode");
-  // AJOUTE CES DEUX LIGNES ICI :
-
-  const imageSelector = document.getElementById("image");
-
-  const imageDisplay = document.getElementById("imageDisplay");
 
   function toggleMode() {
     const mode = modeSelector.value;
@@ -249,19 +269,7 @@
   window.addEventListener("DOMContentLoaded", function() {
     toggleMode();
   });
-  // CETTE PARTIE FONCTIONNERA MAINTENANT :
-
-  imageSelector.addEventListener("change", function(event) {
-    if (event.target.files && event.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        imageDisplay.src = e.target.result;
-        imageDisplay.classList.remove("CACHER"); // Enlève la classe qui cache
-        imageDisplay.style.display = "block";
-      };
-      reader.readAsDataURL(event.target.files[0]);
-    }
-  });
+  // L'aperçu et la compression de l'image sont gérés par resources/js/image-upload.js
 </script>
 
 @include('partials/footer')
